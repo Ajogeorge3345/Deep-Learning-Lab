@@ -1,0 +1,129 @@
+import tensorflow as tf
+from tabulate import tabulate
+from tensorflow.keras import layers, models, regularizers
+from tensorflow.keras.datasets import cifar10
+from tensorflow.keras.utils import to_categorical
+import numpy as np
+import matplotlib.pyplot as plt
+from tensorflow.keras.layers import Flatten, Dense
+from tensorflow.keras.models import Sequential
+import time
+
+# Load and preprocess CIFAR-10 dataset
+(x_train, y_train), (x_test, y_test) = cifar10.load_data()
+x_train, x_test = x_train / 255.0, x_test / 255.0    #Normalization
+y_train, y_test = to_categorical(y_train), to_categorical(y_test) # one hot encoding
+
+result = [['Accuracy'], ['Loss'], ['Time Taken']]
+
+# Baseline Model
+base_model = Sequential([
+        Flatten(input_shape=(32, 32, 3)),
+        Dense(256, activation='relu'), # Hidden Layer 1
+        Dense(128, activation='relu'), # Hidden Layer 2
+        Dense(64, activation='relu'), # Hidden Layer 3
+        Dense(10, activation='softmax')
+    ])
+
+base_model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+st1 = time.time()
+history = base_model.fit(x_train, y_train, epochs=5, batch_size=64, validation_data=(x_test, y_test))
+et1 = time.time()
+duration1 = et1-st1
+test_loss, test_acc = base_model.evaluate(x_test, y_test)
+
+result[0].append(test_acc)
+result[1].append(test_loss)
+result[2].append(duration1)
+
+
+# Xavier Model
+xavier_model = Sequential([
+        Flatten(input_shape=(32, 32, 3)),
+        Dense(256, activation='relu', kernel_initializer = 'glorot_uniform'), # Hidden Layer 1
+        Dense(128, activation='relu', kernel_initializer = 'glorot_uniform'), # Hidden Layer 2
+        Dense(64, activation='relu', kernel_initializer = 'glorot_uniform'), # Hidden Layer 3
+        Dense(10, activation='softmax')
+    ])
+
+xavier_model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+st2 = time.time()
+history = xavier_model.fit(x_train, y_train, epochs=5, batch_size=64, validation_data=(x_test, y_test))
+et2 = time.time()
+duration2 = et2-st2
+test_loss, test_acc = xavier_model.evaluate(x_test, y_test)
+
+result[0].append(test_acc)
+result[1].append(test_loss)
+result[2].append(duration2)
+
+
+#Kaiming Model
+he_model = Sequential([
+        Flatten(input_shape=(32, 32, 3)),
+        Dense(256, activation='relu', kernel_initializer = 'he_normal'), # Hidden Layer 1
+        Dense(128, activation='relu', kernel_initializer = 'he_normal'), # Hidden Layer 2
+        Dense(64 , activation='relu', kernel_initializer = 'he_normal'), # Hidden Layer 3
+        Dense(10 , activation='softmax')
+    ])
+he_model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+st3 = time.time()
+history = he_model.fit(x_train, y_train, epochs=5, batch_size=64, validation_data=(x_test, y_test))
+et3 = time.time()
+duration3 = et3-st3
+test_loss, test_acc = he_model.evaluate(x_test, y_test)
+
+result[0].append(test_acc)
+result[1].append(test_loss)
+result[2].append(duration3)
+
+
+#Dropout Model
+dropout_model = Sequential([
+        Flatten(input_shape=(32, 32, 3)),
+        Dense(256, activation='relu'), layers.Dropout(0.2), # Hidden Layer 1
+        Dense(128, activation='relu'), layers.Dropout(0.2),  # Hidden Layer 2
+        Dense(64 , activation='relu'), layers.Dropout(0.2), # Hidden Layer 3
+        Dense(10, activation='softmax')
+    ])
+
+dropout_model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+st4 = time.time()
+history = dropout_model.fit(x_train, y_train, epochs=5, batch_size=64, validation_data=(x_test, y_test))
+
+duration4 = et4-st4
+test_loss, test_acc = dropout_model.evaluate(x_test, y_test)
+
+result[0].append(test_acc)
+result[1].append(test_loss)
+result[2].append(duration4)
+
+
+# Regularizer Model
+reg_model = Sequential([
+        Flatten(input_shape=(32, 32, 3)),
+        Dense(256, activation='relu', kernel_regularizer= regularizers.l2(0.1)), # Hidden Layer 1
+        Dense(128, activation='relu', kernel_regularizer= regularizers.l2(0.1)), # Hidden Layer 2
+        Dense(64 , activation='relu', kernel_regularizer= regularizers.l2(0.1)), # Hidden Layer 3
+        Dense(10, activation='softmax')
+    ])
+
+reg_model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+st5 = time.time()
+history = reg_model.fit(x_train, y_train, epochs=5, batch_size=64, validation_data=(x_test, y_test))
+et5 = time.time()
+duration5 = et5-st5
+test_loss, test_acc = reg_model.evaluate(x_test, y_test)
+
+result[0].append(test_acc)
+result[1].append(test_loss)
+result[2].append(duration5)
+
+
+
+headers = ['Metrics', 'Baseline', 'Xavier', 'Kaiming', 'Dropout', 'L1 L2']
+print(tabulate(result, headers=headers, floatfmt=".2f"))
+max_accuracy_index = result[0][1:].index(max(result[0][1:]))
+min_time_index = result[2][1:].index(min(result[2][1:]))
+print(f"\nConfiguration with Maximum Accuracy ({max(result[0][1:]):.2f}): { headers[1:][max_accuracy_index]}")
+print(f"Configuration with Minimum Convergence Time ({min(result[2][1:]):.2f}): { headers[1:][min_time_index]}")
