@@ -1,1 +1,73 @@
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.callbacks import EarlyStopping
+from tensorflow.keras.callbacks import EarlyStopping
+from sklearn.metrics import r2_score
 
+df = pd.read_csv('Nifty.csv').iloc[::-1]
+df.drop(['Open', 'High', 'Low'], axis=1, inplace=True)
+
+df['Date'] = pd.to_datetime(df['Date'])
+df_chg= df.set_index(['Date'], drop=True)
+df_chg.head()
+
+plt.figure(figsize=(8,4))
+df_chg['Close'].plot();
+
+split_date = pd.Timestamp('2017-12-27')
+df1 = df_chg['Close']
+train = df1.loc[:split_date]
+test = df1.loc[split_date:]
+plt.figure(figsize=(8,4))
+ax = train.plot()
+test.plot(ax=ax)
+plt.legend(['train', 'test']);
+
+print("We have", len(train), "train values")
+print("We have", len(test), "test values")
+
+train_processed = df_chg.iloc[:, 0:1].values
+train_processed = train_processed[0:4481:1]
+test_processed = df_chg.iloc[:, 0:1].values
+test_processed = test_processed[4480:5913:1]
+
+scaler = MinMaxScaler(feature_range=(-1, 1))
+train_sc = scaler.fit_transform(train_processed)
+test_sc = scaler.transform(test_processed)
+
+X_train = train_sc[:-1]
+y_train = train_sc[1:]
+
+X_test = test_sc[:-1]
+y_test = test_sc[1:]
+
+model = Sequential()
+model.add(Dense(12, input_dim=1, activation='relu'))
+model.add(Dense(1))
+model.compile(loss='mean_squared_error', optimizer='adam')
+early_stop = EarlyStopping(monitor='loss', patience=5, verbose=1)
+history = model.fit(X_train, y_train, epochs=25, batch_size=1, verbose=1, callbacks=[early_stop], shuffle=False)
+
+y_pred_test = model.predict(X_test)
+y_train_pred = model.predict(X_train)
+
+print("The R2 score on the Train set is:\t{:0.3f}".format(r2_score(y_train, y_train_pred)))
+print("The R2 score on the Test set is:\t{:0.3f}".format(r2_score(y_test, y_pred_test)))
+
+test_mse = model.evaluate(X_test, y_test, batch_size=1)
+print('Mean squared error: %f'%test_mse)
+
+plt.figure(figsize=(8,4))
+plt.plot(y_test, label='True')
+plt.plot(y_pred_test, label='NN')
+plt.title("ANN's Prediction")
+plt.xlabel('Observation')
+plt.ylabel('Close Scaled')
+plt.legend()
+plt.show();
