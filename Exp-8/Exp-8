@@ -30,4 +30,5 @@ print('Test Accuracy:', test_acc*100)
 
 test_sequence=np.reshape(x_test[7],(1,-1))
 prediction=model.predict(test_sequence)[0]
-'Positive_review' if int(prediction[0])==1 else "Negative Review"
+result = 'Positive Review' if int(prediction[0] > 0.5) else 'Negative Review'  # Use a threshold
+print(result)
